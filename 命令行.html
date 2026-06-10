@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LemonOS - Ultimate Abyss Edition</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    <style>
+        body { background-color: #012456; color: #eeedf0; font-family: 'Consolas', 'Courier New', monospace; padding: 20px; margin: 0; overflow-x: hidden; min-height: 100vh; transition: transform 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), background-color 0.5s, filter 0.5s; }
+        
+        /* 🍋 开机屏 & 蓝屏 */
+        #lemon-boot-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #000; color: #0f0; font-family: 'Consolas', monospace; z-index: 999999; padding: 20px; box-sizing: border-box; overflow: hidden; transition: opacity 0.8s ease-out; pointer-events: none; }
+        #bsod-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #0000aa; color: #fff; font-family: 'Consolas', monospace; font-size: 20px; z-index: 9999999; padding: 10vw; box-sizing: border-box; display: none; }
+
+        /* ========================================= */
+        /* 🍏 MODERN OS (Citrus UI) 玻璃拟物系统 */
+        /* ========================================= */
+        #modern-desktop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1920') no-repeat center center/cover; z-index: 20000; display: none; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+        .modern-dock { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); padding: 10px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); display: flex; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 20005; }
+        .modern-icon { width: 50px; height: 50px; background: rgba(255,255,255,0.8); border-radius: 12px; display: flex; justify-content: center; align-items: center; font-size: 28px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .modern-icon:hover { transform: translateY(-10px) scale(1.1); box-shadow: 0 10px 15px rgba(0,0,0,0.2); }
+        
+        .modern-window { position: absolute; background: rgba(250, 250, 250, 0.85); backdrop-filter: blur(20px); border-radius: 12px; border: 1px solid rgba(255,255,255,0.5); box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; color: #333; transition: transform 0.1s; }
+        .modern-titlebar { height: 35px; background: rgba(230, 230, 230, 0.5); display: flex; align-items: center; padding: 0 15px; cursor: move; user-select: none; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .modern-controls { display: flex; gap: 8px; margin-right: 15px; }
+        .modern-dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
+        .m-close { background: #ff5f56; } .m-close:hover { background: #e0443e; }
+        .m-min { background: #ffbd2e; } .m-max { background: #27c93f; }
+        .modern-title { flex: 1; text-align: center; font-weight: 600; font-size: 13px; color: #555; pointer-events: none; }
+        .modern-content { flex: 1; padding: 15px; overflow: auto; position: relative; }
+        
+        /* 现代软件样式 */
+        .m-calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; height: 100%; }
+        .m-calc-btn { background: #fff; border: 1px solid #ddd; border-radius: 6px; font-size: 18px; cursor: pointer; display:flex; justify-content:center; align-items:center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);}
+        .m-calc-btn:active { background: #eee; }
+        .m-textarea { width: 100%; height: 100%; border: none; background: transparent; outline: none; font-family: inherit; font-size: 14px; resize: none; }
+        #raycaster-canvas { width: 100%; height: 100%; background: #000; border-radius: 8px; }
+        
+        /* Chat AI 样式 */
+        #m-chat-log { height: 80%; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #fff; margin-bottom: 10px; font-size: 13px; }
+        .chat-msg { margin-bottom: 8px; padding: 8px 12px; border-radius: 15px; max-width: 80%; word-break: break-all; }
+        .chat-user { background: #007aff; color: white; margin-left: auto; border-bottom-right-radius: 2px; }
+        .chat-bot { background: #e5e5ea; color: black; margin-right: auto; border-bottom-left-radius: 2px; }
+
+        /* 💻 Windows 93 风格 GUI */
+        #win-desktop { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #008080; z-index: 10000; display: none; font-family: 'Tahoma', sans-serif; overflow: hidden; }
+        #desktop-icons-container { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 35px); padding: 10px; display: flex; flex-direction: column; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+        .desktop-icon { width: 80px; text-align: center; color: white; cursor: pointer; font-size: 12px; z-index: 10001; }
+        .desktop-icon img { font-size: 40px; display: block; margin: 0 auto 5px auto; }
+        .win-window { position: absolute; background: #c0c0c0; border: 2px solid; border-color: #dfdfdf #000 #000 #dfdfdf; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); display: none; color: black; transition: transform 0.1s; }
+        .win-titlebar { background: #000080; color: white; padding: 3px 5px; font-weight: bold; font-size: 14px; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; }
+        .win-titlebar.error-bar { background: #aa0000; }
+        .win-btn-close { background: #c0c0c0; border: 1px solid; border-color: #dfdfdf #000 #000 #dfdfdf; color: black; font-weight: bold; width: 16px; height: 16px; line-height: 12px; text-align: center; cursor: pointer; }
+        .win-btn-close:active { border-color: #000 #dfdfdf #dfdfdf #000; }
+        .win-content { padding: 10px; font-size: 14px; }
+        .win-taskbar { position: absolute; bottom: 0; left: 0; width: 100%; height: 35px; background: #c0c0c0; border-top: 2px solid #dfdfdf; display: flex; align-items: center; z-index: 99999; }
+        .win-start-btn { background: #c0c0c0; border: 2px solid; border-color: #dfdfdf #000 #000 #dfdfdf; padding: 4px 10px; font-weight: bold; margin-left: 5px; cursor: pointer; font-size: 14px; display: flex; align-items: center; }
+        .win-start-btn:active { border-color: #000 #dfdfdf #dfdfdf #000; }
+        .gui-textarea { width: 100%; height: 150px; background: #fff; color: #000; font-family: monospace; box-sizing: border-box; border: 2px inset #dfdfdf; }
+        .gui-btn { background: #c0c0c0; border: 2px outset #dfdfdf; padding: 5px 15px; cursor: pointer; margin-top: 5px; }
+
+        /* 🌈 彩蛋特效区 */
+        body.engine-3d-active { transform: perspective(1200px) rotateX(15deg) rotateY(-10deg) translateZ(50px); background-color: #000; box-shadow: 0 0 50px rgba(0,255,100,0.2) inset; }
+        body.top10-park { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); color: #333; }
+        body.capcut-vhs { filter: contrast(1.5) sepia(0.3) hue-rotate(-15deg) saturate(1.5); }
+        body.capcut-vhs::after { content: "▶ PLAY - 00:00:00:00"; position: fixed; top: 10px; right: 20px; color: #fff; font-size: 24px; text-shadow: 2px 2px red; z-index: 99999; pointer-events: none; animation: blink 1s infinite; }
+        body.flashbang-active { background: white !important; filter: brightness(300%) contrast(150%) !important; transition: all 0.1s !important; }
+        body.flashbang-recover { transition: all 4s ease-out !important; }
+
+        @keyframes blink { 50% { opacity: 0; } }
+        #matrix-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; opacity: 0; transition: opacity 1s; pointer-events: none; }
+        body.matrix-active #matrix-canvas { opacity: 0.3; }
+        body.matrix-active { background-color: #000; }
+        
+        @keyframes shake { 0% {transform: translate(1px, 1px) rotate(0deg);} 25% {transform: translate(-3px, 0px) rotate(1deg);} 50% {transform: translate(1px, -2px) rotate(-1deg);} 75% {transform: translate(-1px, 2px) rotate(1deg);} 100% {transform: translate(1px, -2px) rotate(0deg);} }
+        @keyframes hardcore-glitch { 0% { filter: invert(0) hue-rotate(0deg); } 20% { filter: invert(1) hue-rotate(90deg); } 40% { filter: invert(0) hue-rotate(180deg); transform: translate(5px, -5px); } 60% { filter: invert(1) hue-rotate(270deg); } 80% { transform: translate(-5px, 5px); } 100% { filter: invert(0) hue-rotate(360deg); } }
+        
+        body.god-mode { animation: shake 0.5s infinite; filter: hue-rotate(90deg) contrast(150%); }
+        body.hack-flashing { animation: hardcore-glitch 0.2s infinite; }
+        
+        /* 💀 Hack 5.0 终极增强特效 */
+        #hack-cam-light { position:fixed; top:20px; right:20px; width:15px; height:15px; background:red; border-radius:50%; box-shadow:0 0 15px red; display:none; z-index:100000; animation: blink 0.5s infinite; }
+        #hack-progress { position:fixed; bottom:20px; left:20px; width:300px; height:20px; background:#222; border:2px solid #0f0; display:none; z-index:100000; }
+        #hack-bar { width:0%; height:100%; background:#0f0; transition: width 0.1s; }
+        #hack-skull { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); color:red; font-family:monospace; font-size:12px; line-height:10px; display:none; z-index:100001; text-shadow:0 0 20px red; pointer-events:none; }
+        
+        .hack-sub-term { position: absolute; background: rgba(0,0,0,0.85); color: #0f0; font-family: monospace; font-size: 10px; padding: 5px; border: 1px solid #0f0; overflow: hidden; pointer-events: none; z-index: 150000; box-shadow: 0 0 10px rgba(0,255,0,0.5); }
+
+        .physics-obj { position: absolute !important; }
+        .tcg-card { position: fixed; width: 40px; height: 60px; background: linear-gradient(135deg, #ffd700, #ff8c00); border: 2px solid white; border-radius: 4px; box-shadow: 0 0 10px rgba(255,215,0,0.8); z-index: 9999; animation: fall linear forwards; display: flex; justify-content: center; align-items: center; font-size: 10px; font-weight: bold; color: white; }
+        .snowflake { position: fixed; background: white; border-radius: 50%; z-index: 999; pointer-events: none; animation: fall linear forwards; opacity: 0.8; }
+        @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+        #card-counter { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; font-weight: bold; color: gold; text-shadow: 0 0 20px red; z-index: 10000; display: none; pointer-events: none; }
+        #handball-smash { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); font-size: 100px; font-weight: bold; color: red; text-shadow: 0 0 30px yellow, 5px 5px 0 #000; z-index: 10000; pointer-events: none; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        #terminal { max-width: 1000px; margin: 0 auto; padding: 10px; position: relative; z-index: 1; transition: top 0.1s, left 0.1s; }
+        #output { white-space: pre-wrap; line-height: 1.4; word-break: break-all; }
+        .color-error { color: #ff3333; font-weight: bold; background: #220000; padding: 2px; }
+        .color-success { color: #ffff00; font-weight: bold; }
+        .color-info { color: #00ff66; }
+        .color-warning { color: #ff9900; }
+        .color-exe { color: #00ccff; font-weight: bold; }
+        .color-py-output { color: #00ffff; }
+        .color-mythic { color: #ff00ff; text-shadow: 0 0 10px #ff00ff; font-weight: bold; animation: pulse 0.5s infinite alternate;}
+        .hack-code-text { color: #0f0; font-weight: bold; text-shadow: 0 0 5px #0f0; }
+
+        .input-line { display: flex; align-items: flex-start; margin-top: 10px; transition: opacity 0.2s; }
+        .prompt { margin-right: 8px; white-space: nowrap; line-height: 1.4; }
+        #cmd-input { background: transparent; border: none; color: inherit; font-family: inherit; font-size: inherit; flex: 1; outline: none; resize: none; overflow: hidden; padding: 0; line-height: 1.4; height: 1.4em; white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+
+<div id="lemon-boot-screen"></div>
+<div id="bsod-screen">
+    <div style="background: white; color: #0000aa; display: inline-block; padding: 2px 10px; font-weight: bold; margin-bottom: 20px;">Windows</div>
+    <p>A fatal exception 0E has occurred at 0028:C0011E36 in VXD VMM(01) + 00010E36.</p>
+    <p>* Press CTRL+ALT+DEL again to restart your computer.</p>
+    <p style="text-align: center; margin-top: 50px;">Press F5 to continue _</p>
+</div>
+<div id="card-counter">0 Cards</div>
+<div id="handball-smash">40 : 1</div>
+
+<div id="hack-cam-light"></div>
+<div id="hack-progress"><div id="hack-bar"></div></div>
+<div id="hack-sub-container"></div>
+<pre id="hack-skull">
+        .ed"""" """$$$$be.
+      -"           ^""**$$$e.
+    ."                   '$$$c
+   /                      "4$$b
+  d  3                      $$$$
+  $  * .$$$$$$
+ .$  ^c           $$$$$e$$$$$$$$.
+ d$L  4.         4$$$$$$$$$$$$$$b
+ $$$$$b"ee.       4$$$$$$$$$$$$$$
+ $$$$$$e ""$e.    "$$$$$$$$$$$$$$$
+ $$$$$$$$$e "$$ee..$$$$$$$$$$$$$$$
+ $$$$$$$$$$$e "$$$$$$$$$$$$$$$$$$$
+ $$$$$$$$$$$$$c "$$$$$$$$$$$$$$$$$
+  $$$$$$$$$$$$$$e "$$$$$$$$$$$$$$
+  "$$$$$$$$$$$$$$$. "$$$$$$$$$$$"
+    "$$$$$$$$$$$$$$$. "$$$$$$$$$
+      "$$$$$$$$$$$$$$c "$$$$$$$
+        "$$$$$$$$$$$$$$c "$$$"
+</pre>
+
+<canvas id="matrix-canvas"></canvas>
+
+<div id="modern-desktop">
+    <div class="modern-dock">
+        <div class="modern-icon" onclick="openModernApp('m-browser')" title="LemonEdge">🌐</div>
+        <div class="modern-icon" onclick="openModernApp('m-calc')" title="Calculator">🧮</div>
+        <div class="modern-icon" onclick="openModernApp('m-notes')" title="Notes">📝</div>
+        <div class="modern-icon" onclick="openModernApp('m-files')" title="Files">📁</div>
+        <div class="modern-icon" onclick="openModernApp('m-game'); initRaycaster();" title="Lemon3D FPS">🔫</div>
+        <div class="modern-icon" onclick="openModernApp('m-paint')" title="Paint">🎨</div>
+        <div class="modern-icon" onclick="openModernApp('m-chat')" title="LemonAI">🤖</div>
+        <div class="modern-icon" onclick="exitModernOS()" title="Shutdown">⏻</div>
+    </div>
+
+    <div class="modern-window" id="m-browser" style="top: 50px; left: 100px; width: 600px; height: 400px; z-index: 20001;">
+        <div class="modern-titlebar"><div class="modern-controls"><div class="modern-dot m-close" onclick="closeModernApp('m-browser')"></div><div class="modern-dot m-min"></div><div class="modern-dot m-max"></div></div><div class="modern-title">LemonEdge Browser</div></div>
+        <div class="modern-content" style="padding:0;">
+            <iframe style="width:100%;height:100%;border:none;" srcdoc="<html><body style='font-family:sans-serif; text-align:center; padding-top:50px;'><h1>🍋 Lemon Search</h1><input type='text' style='width:60%;padding:10px;border-radius:20px;border:1px solid #ccc;' placeholder='Search the multiverse...'><br><button style='margin-top:20px;padding:10px 20px;'>I'm Feeling Lucky</button></body></html>"></iframe>
+        </div>
+    </div>
+
+    <div class="modern-window" id="m-calc" style="top: 100px; left: 150px; width: 250px; height: 350px; z-index: 20002;">
+        <div class="modern-titlebar"><div class="modern-controls"><div class="modern-dot m-close" onclick="closeModernApp('m-calc')"></div><div class="modern-dot m-min"></div><div class="modern-dot m-max"></div></div><div class="modern-title">Calculator</div></div>
+        <div class="modern-content" style="display:flex; flex-direction:column; gap:10px;">
+            <div id="m-calc-screen" style="height:50px; background:#f0f0f0; border-radius:6px; text-align:right; font-size:24px; padding:10px; box-sizing:border-box;">0</div>
+            <div class="m-calc-grid">
+                <div class="m-calc-btn" onclick="calcPress('7')">7</div><div class="m-calc-btn" onclick="calcPress('8')">8</div><div class="m-calc-btn" onclick="calcPress('9')">9</div><div class="m-calc-btn" onclick="calcPress('/')">/</div>
+                <div class="m-calc-btn" onclick="calcPress('4')">4</div><div class="m-calc-btn" onclick="calcPress('5')">5</div><div class="m-calc-btn" onclick="calcPress('6')">6</div><div class="m-calc-btn" onclick="calcPress('*')">*</div>
+                <div class="m-calc-btn" onclick="calcPress('1')">1</div><div class="m-calc-btn" onclick="calcPress('2')">2</div><div class="m-calc-btn" onclick="calcPress('3')">3</div><div class="m-calc-btn" onclick="calcPress('-')">-</div>
+                <div class="m-calc-btn" onclick="calcPress('C')">C</div><div class="m-calc-btn" onclick="calcPress('0')">0</div><div class="m-calc-btn" onclick="calcPress('=')">=</div><div class="m-calc-btn" onclick="calcPress('+')">+</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modern-window" id="m-notes" style="top: 150px; left: 200px; width: 300px; height: 300px; z-index: 20003;">
+        <div class="modern-titlebar"><div class="modern-controls"><div class="modern-dot m-close" onclick="closeModernApp('m-notes')"></div><div class="modern-dot m-min"></div><div class="modern-dot m-max"></div></div><div class="modern-title">Notes</div></div>
+        <div class="modern-content"><textarea class="m-textarea" placeholder="Start typing..."></textarea></div>
+    </div>
+
+    <div class="modern-window" id="m-files" style="top: 200px; left: 250px; width: 350px; height: 250px; z-index: 20004;">
+        <div class="modern-titlebar"><div class="modern-controls"><div class="modern-dot m-close" onclick="closeModernApp('m-files')"></div><div class="modern-dot m-min"></div><div class="modern-dot m-max"></div></div><div class="modern-title">File Explorer</div></div>
+        <div class="modern-content">
+            <h3>C:\Users\Guest\secret_projects</h3>
+            <ul><li>📄 crystal-mayhem-draft.md</li><li>⚙️ crystal-dash.exe</li><li>📁 logs (Empty)</li></ul>
+        </div>
+    </div>
+
+    <div class="modern-window" id="m-game" style="top: 80px; left: 350px; width: 500px; height: 400px; z-index: 20005;">
+        <div class="modern-titlebar"><div class="modern-controls"><div class="modern-dot m-close" onclick="closeModernApp('m-game')"></div><div class="modern-dot m-min"></div><div class="modern-dot m-max"></div></div><div class="modern-title">Lemon3D Engine</div></div>
+        <div class="modern-content" style="padding:0;">
+            <canvas id="raycaster-canvas" width="500" height="365"></canvas>
+            <div style="position:absolute; top:10px; left:10px; color:#fff; text-shadow:1px 1px #000;">WASD/Arrows to Move</div>
+        </div>
+    </div>
+    
+    <div class="modern-window" id="m-paint" style="top: 120px; left: 400px; width: 400px; height: 350px; z-index: 20006;">
+        <div class="modern-titlebar"><div class="modern-controls"><div class="modern-dot m-close" onclick="closeModernApp('m-paint')"></div><div class="modern-dot m-min"></div><div class="modern-dot m-max"></div></div><div class="modern-title">Lemon Paint</div></div>
+        <div class="modern-content" style="padding:0; display:flex; flex-direction:column;">
+            <div style="padding:5px; background:#eee; border-bottom:1px solid #ccc;"><button onclick="clearPaint()">🗑️ Clear</button> <button onclick="paintColor='#f00'">🔴</button> <button onclick="paintColor='#00f'">🔵</button> <button onclick="paintColor='#000'">⚫</button></div>
+            <canvas id="paint-canvas" width="400" height="290" style="background:#fff; cursor:crosshair; touch-action:none;"></canvas>
+        </div>
+    </div>
+
+    <div class="modern-window" id="m-chat" style="top: 140px; left: 450px; width: 350px; height: 400px; z-index: 20007;">
+        <div class="modern-titlebar"><div class="modern-controls"><div class="modern-dot m-close" onclick="closeModernApp('m-chat')"></div><div class="modern-dot m-min"></div><div class="modern-dot m-max"></div></div><div class="modern-title">LemonAI Chat</div></div>
+        <div class="modern-content" style="display:flex; flex-direction:column;">
+            <div id="m-chat-log"><div class="chat-msg chat-bot">你好！我是伪装成大模型的 LemonAI。有啥想被糊弄的吗？</div></div>
+            <div style="display:flex; gap:5px;"><input type="text" id="m-chat-input" style="flex:1; padding:8px; border:1px solid #ccc; border-radius:15px; outline:none;" placeholder="Type here..." onkeypress="if(event.key==='Enter') sendChat()"><button onclick="sendChat()" style="padding:8px 15px; border-radius:15px; border:none; background:#007aff; color:#fff; cursor:pointer;">Send</button></div>
+        </div>
+    </div>
+</div>
+
+<div id="win-desktop">
+    <div id="desktop-icons-container">
+        <div class="desktop-icon" onclick="openWindow('win-terminal')"><div style="font-size:35px;">💻</div> CLI</div>
+        <div class="desktop-icon" onclick="openWindow('win-python')"><div style="font-size:35px;">🐍</div> Py Sandbox</div>
+        <div class="desktop-icon" onclick="openWindow('win-gacha')"><div style="font-size:35px;">🎲</div> Gacha</div>
+        <div class="desktop-icon" onclick="openWindow('win-appstore')"><div style="font-size:35px;">🛒</div> App Store</div>
+        <div class="desktop-icon" ondblclick="triggerNuclearRm()"><div style="font-size:35px;">🗑️</div> Trash</div>
+    </div>
+    <div class="win-window" id="win-terminal" style="top:50px; left:50px; width:350px;"><div class="win-titlebar"><span>Terminal.exe</span><div class="win-btn-close" onclick="closeWindow('win-terminal')">X</div></div><div class="win-content"><button class="gui-btn" onclick="exitGUI()">安全关机</button></div></div>
+    <div class="win-window" id="win-appstore" style="top:80px; left:100px; width:350px;"><div class="win-titlebar"><span>🛒 App Store</span><div class="win-btn-close" onclick="closeWindow('win-appstore')">X</div></div><div class="win-content"><div style="margin-bottom:10px;"><b>⚠️ CrazyError.exe</b><br><button class="gui-btn" onclick="installApp('crazy', this)">Install</button></div><div><b>🐉 Hydra.exe</b><br><button class="gui-btn" onclick="installApp('hydra', this)">Install</button></div></div></div>
+    <div class="win-window" id="win-python" style="top:150px; left:200px; width:450px;"><div class="win-titlebar"><span>Py Sandbox</span><div class="win-btn-close" onclick="closeWindow('win-python')">X</div></div><div class="win-content"><textarea class="gui-textarea" id="gui-py-code">print("Hello!")</textarea><br><button class="gui-btn" onclick="runGuiPython()">Run</button><div id="gui-py-out" style="background:#000;color:#0f0;height:80px;overflow:auto;">Ready.</div></div></div>
+    <div class="win-window" id="win-gacha" style="top:200px; left:300px; width:300px;"><div class="win-titlebar"><span>Gacha</span><div class="win-btn-close" onclick="closeWindow('win-gacha')">X</div></div><div class="win-content" style="text-align:center;"><div id="gui-gacha-res" style="font-size:20px;font-weight:bold;margin-bottom:15px;">? ? ?</div><button class="gui-btn" onclick="guiRollGacha()">Roll ($50k)</button></div></div>
+    <div class="win-taskbar"><div class="win-start-btn" onclick="alert('LemonOS v1.0')">🍋 Start</div></div>
+</div>
+
+<div id="terminal">
+    <div id="output">LemonOS Kernel Environment (Legacy PowerShell Wrapper)
+版权所有 (C) Lemon Corporation。
+
+<span class="color-success">[终极深渊版] 核心已解封。Shift+Enter 多行代码。</span>
+- 基础：<span class="color-info">download python, cd secret_projects, matrix, physics</span>
+- 经典GUI：<span class="color-info">modprobe vga -> startx -> ACCEPT</span>
+- 现代OS：<span class="color-warning">输入 `sudo boot-modern` 验证密码启动！</span>
+- 🌟彩蛋：<span class="color-mythic">bsod, dvd, pokemon, handball, capcut, mario, top10, paknsave, barrelroll, say, rickroll, flashbang, time, snow, gravity</span>
+- <span class="color-error">💀 终极骇客：输入 `hack` 后脸滚键盘，体验带语音播报和自动子终端裂变的终极深渊！</span>
+
+</div>
+    <div class="input-line">
+        <span class="prompt" id="prompt-path">LemonOS C:\Users\Guest></span>
+        <textarea id="cmd-input" autofocus autocomplete="off" spellcheck="false" rows="1"></textarea>
+    </div>
+</div>
+
+<script>
+    const output = document.getElementById('output'); const cmdInput = document.getElementById('cmd-input'); const promptPath = document.getElementById('prompt-path'); const inputLine = document.querySelector('.input-line'); const bootScreen = document.getElementById('lemon-boot-screen'); 
+    
+    // Windows 93 vars
+    const winDesktop = document.getElementById('win-desktop'); const desktopIconsContainer = document.getElementById('desktop-icons-container');
+    
+    // Modern OS vars
+    const modernDesktop = document.getElementById('modern-desktop');
+    let mZIndex = 20005;
+
+    // ==========================================
+    // 🍋 现代系统 Citrus UI 逻辑
+    // ==========================================
+    let mActiveWin = null, mInitX, mInitY, mStartX, mStartY;
+    document.addEventListener('mousedown', (e) => { 
+        let clickedWin = e.target.closest('.modern-window'); 
+        if(clickedWin) { mZIndex++; clickedWin.style.zIndex = mZIndex; } 
+        if (e.target.classList.contains('modern-titlebar')) { mActiveWin = e.target.parentElement; mInitX = mActiveWin.offsetLeft; mInitY = mActiveWin.offsetTop; mStartX = e.clientX; mStartY = e.clientY; } 
+    });
+    document.addEventListener('mousemove', (e) => { if (mActiveWin) { mActiveWin.style.left = (mInitX + e.clientX - mStartX) + 'px'; mActiveWin.style.top = (mInitY + e.clientY - mStartY) + 'px'; } });
+    document.addEventListener('mouseup', () => { mActiveWin = null; });
+
+    function openModernApp(id) { mZIndex++; const win = document.getElementById(id); win.style.display = 'flex'; win.style.zIndex = mZIndex; }
+    function closeModernApp(id) { document.getElementById(id).style.display = 'none'; if(id==='m-game') stopRaycaster(); }
+    function exitModernOS() { modernDesktop.style.display = 'none'; terminalMode = 'normal'; playRetroBeep(300, 'sawtooth', 0.2); printLine('[系统] Citrus UI 已关闭。', 'color-success'); cmdInput.disabled=false; setTimeout(()=>cmdInput.focus(),100); }
+
+    // Calc
+    let calcStr = ""; function calcPress(val) { const screen = document.getElementById('m-calc-screen'); if(val === 'C') { calcStr = ""; screen.innerText = "0"; } else if(val === '=') { try { calcStr = eval(calcStr).toString(); screen.innerText = calcStr; } catch(e) { screen.innerText = "ERR"; calcStr=""; } } else { calcStr += val; screen.innerText = calcStr; } }
+
+    // 🎨 Paint Logic
+    const paintCanvas = document.getElementById('paint-canvas'); const paintCtx = paintCanvas.getContext('2d');
+    let isPainting = false, paintColor = '#000';
+    paintCanvas.addEventListener('mousedown', e => { isPainting = true; drawLine(e); });
+    paintCanvas.addEventListener('mousemove', e => { if(isPainting) drawLine(e); });
+    paintCanvas.addEventListener('mouseup', () => isPainting = false); paintCanvas.addEventListener('mouseout', () => isPainting = false);
+    function drawLine(e) { const rect = paintCanvas.getBoundingClientRect(); const x = e.clientX - rect.left; const y = e.clientY - rect.top; paintCtx.lineWidth = 3; paintCtx.lineCap = 'round'; paintCtx.strokeStyle = paintColor; paintCtx.lineTo(x, y); paintCtx.stroke(); paintCtx.beginPath(); paintCtx.moveTo(x, y); }
+    function clearPaint() { paintCtx.clearRect(0,0, paintCanvas.width, paintCanvas.height); paintCtx.beginPath(); }
+
+    // 🤖 AI Chat Logic
+    function sendChat() {
+        const inp = document.getElementById('m-chat-input'); const log = document.getElementById('m-chat-log'); const text = inp.value.trim(); if(!text) return;
+        log.innerHTML += `<div class="chat-msg chat-user">${text}</div>`; inp.value = ""; log.scrollTop = log.scrollHeight;
+        setTimeout(() => {
+            const replies = ["这个问题很有深度，但我选择不回答。","不如我们去挖水晶吧？","Error 404: 智商未找到。","这属于绝密资料，请在终端输入 hack 破解。","多喝热水。"];
+            log.innerHTML += `<div class="chat-msg chat-bot">${replies[Math.floor(Math.random()*replies.length)]}</div>`; log.scrollTop = log.scrollHeight; playRetroBeep(600,'sine',0.1);
+        }, 1000);
+    }
+
+    // 🔫 3D Raycaster Engine
+    let rcCanvas, rcCtx, rcAnimId; let pX = 3.5, pY = 3.5, pDirX = -1, pDirY = 0, pPlaneX = 0, pPlaneY = 0.66;
+    const rcMap = [[1,1,1,1,1,1,1,1], [1,0,0,0,0,0,0,1], [1,0,1,0,1,1,0,1], [1,0,1,0,0,0,0,1], [1,0,0,0,0,1,0,1], [1,0,1,1,0,1,0,1], [1,0,0,0,0,0,0,1], [1,1,1,1,1,1,1,1]];
+    let keys = {}; window.addEventListener('keydown', e => { if(terminalMode === 'modern_os') keys[e.key.toLowerCase()] = true; }); window.addEventListener('keyup', e => { if(terminalMode === 'modern_os') keys[e.key.toLowerCase()] = false; });
+    function initRaycaster() { rcCanvas = document.getElementById('raycaster-canvas'); rcCtx = rcCanvas.getContext('2d'); if(!rcAnimId) rcLoop(); }
+    function stopRaycaster() { cancelAnimationFrame(rcAnimId); rcAnimId = null; }
+    function rcLoop() {
+        const moveSpeed = 0.05, rotSpeed = 0.04;
+        if(keys['w'] || keys['arrowup']) { if(rcMap[Math.floor(pX + pDirX * moveSpeed)][Math.floor(pY)] == 0) pX += pDirX * moveSpeed; if(rcMap[Math.floor(pX)][Math.floor(pY + pDirY * moveSpeed)] == 0) pY += pDirY * moveSpeed; }
+        if(keys['s'] || keys['arrowdown']) { if(rcMap[Math.floor(pX - pDirX * moveSpeed)][Math.floor(pY)] == 0) pX -= pDirX * moveSpeed; if(rcMap[Math.floor(pX)][Math.floor(pY - pDirY * moveSpeed)] == 0) pY -= pDirY * moveSpeed; }
+        if(keys['d'] || keys['arrowright']) { let oldDirX = pDirX; pDirX = pDirX * Math.cos(-rotSpeed) - pDirY * Math.sin(-rotSpeed); pDirY = oldDirX * Math.sin(-rotSpeed) + pDirY * Math.cos(-rotSpeed); let oldPlaneX = pPlaneX; pPlaneX = pPlaneX * Math.cos(-rotSpeed) - pPlaneY * Math.sin(-rotSpeed); pPlaneY = oldPlaneX * Math.sin(-rotSpeed) + pPlaneY * Math.cos(-rotSpeed); }
+        if(keys['a'] || keys['arrowleft']) { let oldDirX = pDirX; pDirX = pDirX * Math.cos(rotSpeed) - pDirY * Math.sin(rotSpeed); pDirY = oldDirX * Math.sin(rotSpeed) + pDirY * Math.cos(rotSpeed); let oldPlaneX = pPlaneX; pPlaneX = pPlaneX * Math.cos(rotSpeed) - pPlaneY * Math.sin(rotSpeed); pPlaneY = oldPlaneX * Math.sin(rotSpeed) + pPlaneY * Math.cos(rotSpeed); }
+        rcCtx.fillStyle = '#333'; rcCtx.fillRect(0, 0, 500, 182); rcCtx.fillStyle = '#555'; rcCtx.fillRect(0, 182, 500, 183);
+        for(let x = 0; x < 500; x++) {
+            let cameraX = 2 * x / 500 - 1; let rayDirX = pDirX + pPlaneX * cameraX; let rayDirY = pDirY + pPlaneY * cameraX; let mapX = Math.floor(pX); let mapY = Math.floor(pY); let sideDistX, sideDistY, perpWallDist; let deltaDistX = Math.abs(1 / rayDirX), deltaDistY = Math.abs(1 / rayDirY); let stepX, stepY, hit = 0, side;
+            if(rayDirX < 0) { stepX = -1; sideDistX = (pX - mapX) * deltaDistX; } else { stepX = 1; sideDistX = (mapX + 1.0 - pX) * deltaDistX; }
+            if(rayDirY < 0) { stepY = -1; sideDistY = (pY - mapY) * deltaDistY; } else { stepY = 1; sideDistY = (mapY + 1.0 - pY) * deltaDistY; }
+            while(hit == 0) { if(sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += stepX; side = 0; } else { sideDistY += deltaDistY; mapY += stepY; side = 1; } if(rcMap[mapX][mapY] > 0) hit = 1; }
+            if(side == 0) perpWallDist = (mapX - pX + (1 - stepX) / 2) / rayDirX; else perpWallDist = (mapY - pY + (1 - stepY) / 2) / rayDirY;
+            let h = 365; let lineHeight = Math.floor(h / perpWallDist); let drawStart = -lineHeight / 2 + h / 2; if(drawStart < 0) drawStart = 0; let drawEnd = lineHeight / 2 + h / 2; if(drawEnd >= h) drawEnd = h - 1;
+            let color = (rcMap[mapX][mapY] == 1) ? '#0f0' : '#0cc'; if(side == 1) color = '#099';
+            rcCtx.strokeStyle = color; rcCtx.beginPath(); rcCtx.moveTo(x, drawStart); rcCtx.lineTo(x, drawEnd); rcCtx.stroke();
+        }
+        rcAnimId = requestAnimationFrame(rcLoop);
+    }
+
+    // ==========================================
+    // 🍋 LemonOS 开机
+    // ==========================================
+    async function typeLine(text, delay) { return new Promise(resolve => { setTimeout(() => { const div = document.createElement('div'); div.textContent = text; bootScreen.appendChild(div); bootScreen.scrollTop = bootScreen.scrollHeight; resolve(); }, delay); }); }
+    async function runLemonOSBoot() {
+        cmdInput.disabled = true;
+        await typeLine("LemonBIOS (C) 2026 Lemon Technologies Inc.", 50); await typeLine("CPU: Lemon Silicon X1 @ 4.2GHz", 50); await typeLine("Memory Test: 1048576K OK", 100); await typeLine("Detecting IDE Primary Master... [LemonDrive 1TB NVMe]", 150); await typeLine("Booting LemonOS (v.Citrus Kernel)...", 200);
+        for(let i=0; i<20; i++) { let hex = Math.floor(Math.random()*0xffffffff).toString(16).padStart(8, '0'); await typeLine(`[OK] Loading module 0x${hex} ... SYS_DRIVER_${i}.sys`, 10); }
+        await typeLine("Starting LemonOS Shell Environment...", 200); playRetroBeep(1200, 'sine', 0.1); bootScreen.style.opacity = "0"; setTimeout(() => { bootScreen.remove(); cmdInput.disabled = false; cmdInput.focus(); }, 800);
+    }
+    window.onload = runLemonOSBoot;
+
+    // ==========================================
+    // 💻 LDE 桌面层叠管理器 (Win93)
+    // ==========================================
+    let isVgaUnlocked = false, pendingAccept = false, topZIndex = 10001, dynamicWinCount = 0;
+    function exitGUI() { winDesktop.style.display = 'none'; terminalMode = 'normal'; playRetroBeep(300, 'sawtooth', 0.2); printLine('[系统] LDE 图形界面已安全关闭。', 'color-success'); setTimeout(() => { cmdInput.focus(); window.scrollTo(0, document.body.scrollHeight); }, 100); }
+    let activeWin = null, initX, initY, startX, startY;
+    document.addEventListener('mousedown', (e) => { let clickedWin = e.target.closest('.win-window'); if(clickedWin) { topZIndex++; clickedWin.style.zIndex = topZIndex; } if (e.target.classList.contains('win-titlebar')) { activeWin = e.target.parentElement; initX = activeWin.offsetLeft; initY = activeWin.offsetTop; startX = e.clientX; startY = e.clientY; } });
+    document.addEventListener('mousemove', (e) => { if (activeWin) { activeWin.style.left = (initX + e.clientX - startX) + 'px'; activeWin.style.top = (initY + e.clientY - startY) + 'px'; } });
+    document.addEventListener('mouseup', () => { activeWin = null; });
+
+    function openWindow(id) { topZIndex++; const win = document.getElementById(id); win.style.display = 'block'; win.style.zIndex = topZIndex; }
+    function closeWindow(id) { document.getElementById(id).style.display = 'none'; }
+    function createDynamicWindow(title, content, x, y, isError = false, onCloseCallback = null) {
+        dynamicWinCount++; topZIndex++; const win = document.createElement('div'); win.className = 'win-window'; win.style.display = 'block'; win.style.left = x + 'px'; win.style.top = y + 'px'; win.style.width = '250px'; win.style.zIndex = topZIndex;
+        const tbar = document.createElement('div'); tbar.className = 'win-titlebar' + (isError ? ' error-bar' : ''); tbar.innerHTML = `<span>${title}</span>`;
+        const closeBtn = document.createElement('div'); closeBtn.className = 'win-btn-close'; closeBtn.innerText = 'X'; closeBtn.onclick = function() { win.remove(); if(onCloseCallback) onCloseCallback(x, y); }; tbar.appendChild(closeBtn);
+        const cbox = document.createElement('div'); cbox.className = 'win-content'; cbox.innerHTML = content; win.appendChild(tbar); win.appendChild(cbox); winDesktop.appendChild(win);
+        return win;
+    }
+
+    // App Store
+    function installApp(appId, btn) { if(document.getElementById('icon-' + appId)) { alert('已安装！'); return; } btn.innerText = "Installing..."; btn.disabled = true; setTimeout(() => { btn.innerText = "Installed"; playRetroBeep(800, 'square', 0.1); const icon = document.createElement('div'); icon.className = 'desktop-icon'; icon.id = 'icon-' + appId; if(appId === 'crazy') { icon.innerHTML = '<div style="font-size:35px;">⚠️</div> CrazyError'; icon.onclick = runCrazyError; } else if(appId === 'hydra') { icon.innerHTML = '<div style="font-size:35px;">🐉</div> Hydra'; icon.onclick = () => runHydra(); } desktopIconsContainer.appendChild(icon); }, 800); }
+    function runCrazyError() { playRetroBeep(200, 'square', 0.3); let count = 0; let iv = setInterval(() => { createDynamicWindow('Fatal Error', '<div style="display:flex;align-items:center"><span style="font-size:30px;color:red;margin-right:10px">❌</span> Stack Overflow!</div>', Math.random()*(window.innerWidth-250), Math.random()*(window.innerHeight-150), true); playRetroBeep(150 + Math.random()*200, 'sawtooth', 0.05); count++; if(count > 45) clearInterval(iv); }, 60); }
+    function runHydra(x = window.innerWidth/2 - 125, y = window.innerHeight/2 - 50) { playRetroBeep(300, 'sine', 0.1); createDynamicWindow('Hydra.exe', '<div style="display:flex;align-items:center"><span style="font-size:30px;margin-right:10px">🐉</span> Cut one head...</div>', x, y, false, (oldX, oldY) => { runHydra(oldX - 60 + Math.random()*120, oldY - 60 + Math.random()*120); runHydra(oldX - 60 + Math.random()*120, oldY - 60 + Math.random()*120); }); }
+    async function runGuiPython() { const outBox = document.getElementById('gui-py-out'); const code = document.getElementById('gui-py-code').value; if(!isPythonDownloaded) { outBox.innerText = "ERR: Wasm未挂载。"; return; } outBox.innerText = "Running..."; try { let res = await pyodideInstance.runPythonAsync(code); outBox.innerText = res !== undefined ? res : "Execution complete."; } catch(e) { outBox.innerText = e.toString(); } }
+    function guiRollGacha() { const resBox = document.getElementById('gui-gacha-res'); resBox.innerText = "Rolling..."; playRetroBeep(500, 'sine', 0.1); setTimeout(() => { const isMythic = Math.random() > 0.8; resBox.innerHTML = isMythic ? "<span style='color:magenta'>Mythical KITSUNE Fruit!</span>" : "Common Chop Fruit"; playRetroBeep(isMythic ? 1200 : 300, 'square', 0.3); }, 1000); }
+    function triggerNuclearRm() { exitGUI(); handlePowerShell('rm -rf'); }
+
+    // ==========================================
+    // 基础系统与组件变量
+    // ==========================================
+    let currentDir = { 'secret_projects': { 'crystal-mayhem-draft.md': '《Crystal Mayhem》设定大纲', 'crystal-dash.exe': '[2D Engine]' }, 'logs': { 'sports_record.log': '手球 40:1' } }; let currentPath = ['root'], terminalMode = 'normal'; let pyodideInstance = null, isPythonDownloaded = false, pythonBuffer = []; let dlGameInterval = null, dlGameState = { jumpTimer: 0, obs: 30, score: 0, crash: false }, dlGameContainer = null; const MAP_WIDTH = 25, MAP_HEIGHT = 15; let gameMap = [], playerPos = { x: 12, y: 0 }, miningStats = { crystals: 0, coins: 0 }; let konamiCode = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright', 'arrowleft', 'arrowright', 'b', 'a'], konamiIndex = 0;
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playRetroBeep(freq, type, duration) { if(audioCtx.state === 'suspended') audioCtx.resume(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + duration); }
+
+    // ==========================================
+    // 💀 终极深渊 HACKER TYPER 5.0 (语音 + 裂变子终端)
+    // ==========================================
+    let hackIndex = 0; let hackWindowCount = 0; let hackSubTerms = [];
+    const HACK_CODE = `struct group_info init_groups = { .usage = ATOMIC_INIT(2) };\nstruct group_info *groups_alloc(int gidsetsize){\n    struct group_info *group_info;\n    int nblocks, i;\n    nblocks = (gidsetsize + NGROUPS_PER_BLOCK - 1) / NGROUPS_PER_BLOCK;\n    nblocks = nblocks ? : 1;\n    group_info = kmalloc(sizeof(*group_info) + nblocks*sizeof(gid_t *), GFP_USER);\n    if (!group_info) return NULL;\n    group_info->ngroups = gidsetsize;\n    group_info->nblocks = nblocks;\n    atomic_set(&group_info->usage, 1);\n    if (gidsetsize <= NGROUPS_SMALL) group_info->blocks[0] = group_info->small_block;\n    else {\n        for (i = 0; i < nblocks; i++) {\n            gid_t *b = (void *)__get_free_page(GFP_USER);\n            if (!b) goto out_undo_partial_alloc;\n            group_info->blocks[i] = b;\n        }\n    }\n    return group_info;\n}\nEXPORT_SYMBOL(groups_alloc);\n// BYPASSING KERNEL MEMORY DEFENSES...\n// INJECTING SQL PAYLOAD...\n// ROOTKIT ESTABLISHED.\n`;
+
+    function speakAI(text) { const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.pitch = 0.5; u.rate = 1.2; speechSynthesis.speak(u); }
+
+    function triggerComplexHackWindow() {
+        let type = Math.floor(Math.random() * 4); let title = "", content = ""; let isErr = Math.random() > 0.6;
+        if (type === 0) { title = "DECRYPTING RSA-8192"; content = `<div style="background:#000;color:#0f0;font-family:monospace;padding:10px;text-align:center;"><div style="font-size:20px;letter-spacing:5px;">${Math.random().toString(36).substring(2,10).toUpperCase()}</div><div style="font-size:10px;margin-top:10px;">BRUTE FORCING HASH...</div><div style="width:100%;height:10px;background:#333;margin-top:5px;"><div style="width:${Math.random()*100}%;height:100%;background:#0f0;"></div></div></div>`; } 
+        else if (type === 1) { title = "SATELLITE UPLINK"; content = `<div style="background:#000;color:red;font-family:monospace;padding:10px;text-align:center;"><div style="font-size:24px;animation: pulse 0.1s infinite">TRACE DETECTED</div><div style="font-size:12px;">Rerouting via ${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}.x</div></div>`; } 
+        else if (type === 2) { title = "PAYLOAD INJECTOR"; content = `<div style="background:#000;color:#fff;padding:10px;display:flex;gap:5px;flex-wrap:wrap;">${Array.from({length:40}).map(()=>`<div style="width:10px;height:10px;background:${Math.random()>0.3?'#0f0':'#333'};border-radius:2px;"></div>`).join('')}</div>`; } 
+        else { title = "CCTV OVERRIDE"; content = `<div style="background:#222;height:80px;display:flex;align-items:center;justify-content:center;color:#fff;text-shadow:0 0 10px #fff;animation:shake 0.1s infinite;font-size:18px;font-weight:bold;letter-spacing:2px;">SIGNAL LOST</div>`; }
+        let win = createDynamicWindow(title, content, Math.random()*(window.innerWidth-300), Math.random()*(window.innerHeight-200), isErr);
+        win.style.transform = `rotate(${Math.random()*10 - 5}deg) scale(${Math.random()*0.3 + 0.8})`;
+    }
+
+    function spawnHackSubTerm() {
+        let sub = document.createElement('div'); sub.className = 'hack-sub-term';
+        sub.style.left = Math.random()*(window.innerWidth-150) + 'px'; sub.style.top = Math.random()*(window.innerHeight-100) + 'px';
+        sub.style.width = (Math.random()*100 + 100) + 'px'; sub.style.height = (Math.random()*80 + 50) + 'px';
+        document.getElementById('hack-sub-container').appendChild(sub);
+        let iv = setInterval(() => { if(terminalMode!=='hack_typer' && terminalMode!=='hack_climax'){clearInterval(iv);return;} sub.innerText += Math.random().toString(16).substring(2,6) + " "; if(sub.innerText.length>200) sub.innerText = sub.innerText.substring(50); sub.scrollTop = sub.scrollHeight; }, 50);
+        hackSubTerms.push(iv);
+    }
+
+    // ==========================================
+    // 🌈 引擎特效区
+    // ==========================================
+    const canvas = document.getElementById('matrix-canvas'); const ctx = canvas.getContext('2d'); canvas.width = window.innerWidth; canvas.height = window.innerHeight; const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZアイウエオ'.split(''); const drops = []; for(let i=0; i<canvas.width/15; i++) drops[i] = 1;
+    function drawMatrix() { ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#0F0'; ctx.font = '15px monospace'; for(let i=0; i<drops.length; i++) { ctx.fillText(chars[Math.floor(Math.random() * chars.length)], i*15, drops[i]*15); if(drops[i]*15 > canvas.height && Math.random() > 0.975) drops[i] = 0; drops[i]++; } if(document.body.classList.contains('matrix-active')) requestAnimationFrame(drawMatrix); }
+
+    let physicsActive = false, physicsNodes = [];
+    function activateGeometryPhysics() { if(physicsActive) return; physicsActive = true; 
+        document.querySelectorAll('div, span, button, iframe, canvas').forEach(div => { if(div.id!=='lemon-boot-screen' && div.id!=='bsod-screen') { div.classList.add('physics-obj'); physicsNodes.push({ el: div, x: div.offsetLeft, y: div.offsetTop||0, vx: (Math.random()-0.5)*10, vy: -Math.random()*10 - 5 }); }}); 
+        function applyGravity() { let stillMoving = false; physicsNodes.forEach(node => { node.vy += 0.8; node.x += node.vx; node.y += node.vy; if(node.y > window.innerHeight-50) { node.y = window.innerHeight-50; node.vy *= -0.4; node.vx *= 0.8; } node.el.style.left = node.x + 'px'; node.el.style.top = node.y + 'px'; if(Math.abs(node.vy) > 0.5 || node.y < window.innerHeight-50) stillMoving = true; }); if(stillMoving && physicsActive) requestAnimationFrame(applyGravity); } applyGravity(); }
+
+    let dvdInterval; function startDvdBounce() { if(dvdInterval) return; const term = document.getElementById('terminal'); term.style.position = 'fixed'; let x = 100, y = 100, dx = 3, dy = 3; dvdInterval = setInterval(() => { const rect = term.getBoundingClientRect(); if(x + rect.width >= window.innerWidth || x <= 0) dx = -dx; if(y + rect.height >= window.innerHeight || y <= 0) dy = -dy; x += dx; y += dy; term.style.left = x + 'px'; term.style.top = y + 'px'; }, 16); }
+
+    function triggerPokemonRain() { const counter = document.getElementById('card-counter'); counter.style.display = 'block'; let cards = 0; let pRain = setInterval(() => { const card = document.createElement('div'); card.className = 'tcg-card'; card.innerText = 'TCG'; card.style.left = Math.random() * window.innerWidth + 'px'; card.style.top = '-80px'; card.style.animationDuration = (Math.random() * 2 + 1) + 's'; document.body.appendChild(card); cards += 158277; if(cards > 5286476) cards = 5286476; counter.innerText = `${cards.toLocaleString()} Cards Collected`; setTimeout(() => card.remove(), 3000); if(cards >= 5286476) { clearInterval(pRain); setTimeout(() => counter.style.display='none', 3000); } }, 50); }
+    function triggerHandballSmash() { const ball = document.createElement('div'); ball.style.width = '30px'; ball.style.height = '30px'; ball.style.background = 'orange'; ball.style.borderRadius = '50%'; ball.style.position = 'fixed'; ball.style.top = '10px'; ball.style.left = '10px'; ball.style.zIndex = '100000'; document.body.appendChild(ball); let x = 10, y = 10, dx = 15, dy = 15, bounces = 0; let bounceIv = setInterval(() => { x += dx; y += dy; if(x <= 0 || x >= window.innerWidth - 30) { dx = -dx; bounces++; playRetroBeep(400, 'sine', 0.1); } if(y <= 0 || y >= window.innerHeight - 30) { dy = -dy; bounces++; playRetroBeep(400, 'sine', 0.1); } ball.style.left = x + 'px'; ball.style.top = y + 'px'; if(bounces > 15) { clearInterval(bounceIv); ball.remove(); playRetroBeep(100, 'sawtooth', 1); const smash = document.getElementById('handball-smash'); smash.style.transform = 'translate(-50%, -50%) scale(1)'; document.body.classList.add('god-mode'); setTimeout(() => { smash.style.transform = 'translate(-50%, -50%) scale(0)'; document.body.classList.remove('god-mode'); }, 3000); } }, 16); }
+    function startSnow() { let snowIv = setInterval(() => { const flake = document.createElement('div'); flake.className = 'snowflake'; flake.style.width = flake.style.height = (Math.random() * 5 + 5) + 'px'; flake.style.left = Math.random() * window.innerWidth + 'px'; flake.style.top = '-10px'; flake.style.animationDuration = (Math.random() * 3 + 2) + 's'; document.body.appendChild(flake); setTimeout(() => flake.remove(), 5000); }, 100); }
+    function triggerFlashbang() { document.body.classList.add('flashbang-active'); playRetroBeep(4000, 'sine', 3); setTimeout(() => { document.body.classList.remove('flashbang-active'); document.body.classList.add('flashbang-recover'); setTimeout(()=>document.body.classList.remove('flashbang-recover'), 4000); }, 200); }
+
+    // ==========================================
+    // 全局键盘监听与密码/黑客模拟器截获
+    // ==========================================
+    cmdInput.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'; });
+    cmdInput.addEventListener('keydown', async function(event) {
+        if(event.key.toLowerCase() === konamiCode[konamiIndex]) { konamiIndex++; if(konamiIndex === konamiCode.length) { document.body.classList.toggle('god-mode'); playRetroBeep(880, 'square', 0.5); printLine('\n[GOD MODE UNLOCKED] 屏幕过载！', 'color-mythic'); konamiIndex = 0; } } else konamiIndex = 0;
+        
+        if (terminalMode === 'mining_gui') return handle2DGameInput(event);
+        if (terminalMode === 'download_game') { if(event.key === ' ' || event.key.toLowerCase() === 'w') { event.preventDefault(); if(dlGameState.jumpTimer === 0 && !dlGameState.crash) dlGameState.jumpTimer = 6; } return; }
+        if (terminalMode === 'gacha_rolling' || terminalMode === 'desktop_gui' || terminalMode === 'modern_os' || terminalMode === 'bsod' || terminalMode === 'hack_climax') { event.preventDefault(); return; }
+
+        if (terminalMode === 'modern_login') { if (event.key === 'Enter') { event.preventDefault(); if (cmdInput.value === 'lemon') { printLine('认证成功。正在编译现代内核...'); cmdInput.value = ''; cmdInput.type = 'text'; cmdInput.disabled = true; for(let i=0; i<15; i++) { await new Promise(r => setTimeout(r, 50)); printLine(`[CITRUS-KERNEL] Extracting block ${i}... OK`); window.scrollTo(0, document.body.scrollHeight); } playRetroBeep(800, 'sine', 0.3); terminalMode = 'modern_os'; modernDesktop.style.display = 'block'; } else { printLine('密码错误！', 'color-error'); cmdInput.value = ''; terminalMode = 'normal'; cmdInput.type = 'text'; promptPath.textContent = 'LemonOS C:\\Users\\Guest>'; } return; } }
+
+        // Hack 5.0 Typer
+        if (terminalMode === 'hack_typer') {
+            event.preventDefault();
+            if (event.key === 'Escape') {
+                terminalMode = 'normal'; winDesktop.style.display = 'none'; winDesktop.style.backgroundColor = '#008080'; desktopIconsContainer.style.display = 'flex'; document.body.classList.remove('hack-flashing');
+                document.getElementById('hack-cam-light').style.display = 'none'; document.getElementById('hack-progress').style.display = 'none'; document.getElementById('hack-skull').style.display = 'none';
+                document.getElementById('hack-sub-container').innerHTML = ''; hackSubTerms = [];
+                document.querySelectorAll('.win-window').forEach(w => { if(!['win-terminal', 'win-python', 'win-gacha', 'win-appstore', 'm-browser', 'm-calc', 'm-notes', 'm-files', 'm-game', 'm-paint', 'm-chat'].includes(w.id)) w.remove(); });
+                printLine('\n[SYSTEM] 黑客入侵已中止。', 'color-success'); window.scrollTo(0, document.body.scrollHeight); return;
+            }
+            
+            playRetroBeep(Math.random() * 2000 + 300, ['sine', 'square', 'sawtooth'][Math.floor(Math.random()*3)], 0.05);
+            if (Math.random() > 0.85) { document.body.classList.add('hack-flashing'); setTimeout(() => document.body.classList.remove('hack-flashing'), 100); }
+
+            let charsToAdd = Math.floor(Math.random() * 10) + 5; let t = HACK_CODE.substring(hackIndex, hackIndex + charsToAdd); hackIndex = (hackIndex + charsToAdd) % HACK_CODE.length;
+            let outDiv = document.getElementById('hack-typer-output');
+            if(outDiv) { outDiv.appendChild(document.createTextNode(t)); if(outDiv.innerText.length > 2000) outDiv.innerText = outDiv.innerText.substring(500); }
+            window.scrollTo(0, document.body.scrollHeight);
+
+            hackWindowCount++;
+            document.getElementById('hack-bar').style.width = Math.min((hackWindowCount / 120) * 100, 100) + '%';
+            
+            // 语音警告 & 子终端裂变
+            if (hackWindowCount === 15) speakAI("Warning. Unauthorized access detected.");
+            if (hackWindowCount % 12 === 0) triggerComplexHackWindow();
+            if (hackWindowCount % 20 === 0) spawnHackSubTerm();
+            if (hackWindowCount === 80) speakAI("Critical breach in sector 7.");
+            
+            // 终极崩塌
+            if (hackWindowCount >= 120) {
+                 terminalMode = 'hack_climax'; document.body.classList.add('hack-flashing');
+                 document.getElementById('hack-cam-light').style.display = 'none'; document.getElementById('hack-progress').style.display = 'none';
+                 document.getElementById('hack-skull').style.display = 'block';
+                 speakAI("Access Granted. Mainframe compromised. Initiating system collapse.");
+                 setTimeout(()=> document.body.classList.remove('hack-flashing'), 2000);
+                 createDynamicWindow('SYS_OVERRIDE_COMPLETE', '<h1 style="color:red; text-align:center; text-shadow: 0 0 20px red; font-size:40px; animation: pulse 0.1s infinite; margin:20px 0;">ACCESS GRANTED</h1>', window.innerWidth/2 - 200, window.innerHeight/2 - 150, true);
+                 playRetroBeep(200, 'sawtooth', 3);
+                 setTimeout(() => activateGeometryPhysics(), 2500); // 物理崩塌！
+            }
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            if (event.shiftKey) { setTimeout(() => { cmdInput.style.height = 'auto'; cmdInput.style.height = cmdInput.scrollHeight + 'px'; }, 0); return; }
+            event.preventDefault(); 
+            const inputValue = cmdInput.value; const trimmedValue = inputValue.trim();
+            if (inputValue !== '') {
+                const safeInput = inputValue.replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag));
+                printLine(`${promptPath.textContent} ${safeInput}`);
+                if (pendingAccept) {
+                    if (trimmedValue === 'ACCEPT') { pendingAccept = false; terminalMode = 'desktop_gui'; winDesktop.style.display = 'block'; playRetroBeep(600, 'square', 0.1); setTimeout(()=>playRetroBeep(800, 'square', 0.3), 150); } else { pendingAccept = false; printLine('已中止 GUI 启动。', 'color-error'); }
+                } else if (terminalMode === 'python') handlePythonREPL(inputValue);
+                else handlePowerShell(trimmedValue);
+            } else { if (terminalMode === 'python') { printLine(`${promptPath.textContent}`); handlePythonREPL(''); } else printLine(`${promptPath.textContent}`); }
+            cmdInput.value = ''; cmdInput.style.height = '1.4em'; window.scrollTo(0, document.body.scrollHeight);
+        }
+    });
+    document.addEventListener('click', () => { if(!cmdInput.disabled && terminalMode !== 'desktop_gui' && terminalMode !== 'bsod' && terminalMode !== 'modern_os') cmdInput.focus(); });
+    function printLine(text, className = '') { const div = document.createElement('div'); if (className) div.className = className; div.innerHTML = text; output.appendChild(div); }
+
+    // ==========================================
+    // CLI 核心命令路由
+    // ==========================================
+    function handlePowerShell(line) {
+        const parts = line.split(/\s+/); const cmd = parts[0].toLowerCase(); const arg1 = parts[1] ? parts[1].toLowerCase() : '';
+
+        // 【现代 GUI 激活】
+        if (cmd === 'sudo' && arg1 === 'boot-modern') { promptPath.textContent = 'Password for Guest: '; cmdInput.type = 'password'; terminalMode = 'modern_login'; return; }
+
+        // 【Win93 GUI 激活】
+        if (cmd === 'init' && arg1 === '5') { printLine('ERR: 系统缺少显示驱动。尝试: modprobe vga', 'color-error'); return; }
+        if (cmd === 'modprobe' && arg1 === 'vga') { isVgaUnlocked = true; printLine('VGA 驱动器已上线！运行 "startx" 启动图形化桌面。', 'color-success'); playRetroBeep(300, 'sine', 0.2); return; }
+        if (cmd === 'startx') { if (!isVgaUnlocked) { printLine('ERR: NO VGA ADAPTER.', 'color-error'); return; } printLine('⚠️ Lemon Desktop Environment 接管警告。\n输入 <span class="color-success">ACCEPT</span> 确认启动：'); pendingAccept = true; return; }
+
+        // 🔥【超载核弹区 & HACK】
+        if (cmd === 'say') { const text = parts.slice(1).join(' '); if(text) { speakAI(text); printLine(`🔊 语音播报: "${text}"`, 'color-info'); } else printLine('用法: say 你想说的话', 'color-error'); return; }
+        if (cmd === 'hack') { 
+            terminalMode = 'hack_typer'; hackIndex = 0; hackWindowCount = 0; document.getElementById('hack-sub-container').innerHTML = ''; hackSubTerms = [];
+            winDesktop.style.display = 'block'; winDesktop.style.backgroundColor = 'transparent'; desktopIconsContainer.style.display = 'none';
+            document.getElementById('hack-cam-light').style.display = 'block'; document.getElementById('hack-progress').style.display = 'block'; document.getElementById('hack-bar').style.width = '0%';
+            let hackDiv = document.createElement('div'); hackDiv.id = 'hack-typer-output'; hackDiv.className = 'hack-code-text'; output.appendChild(hackDiv);
+            printLine('\n>>> 深度链接建立。黑客模式启动。 <<<', 'color-error'); printLine('⚠️ 提示：闭上眼睛，双手在键盘上疯狂乱按！按 [ESC] 退出。', 'color-warning'); return; 
+        }
+        
+        if (cmd === 'rickroll') { printLine('🎵 Never gonna give you up...', 'color-success'); createDynamicWindow('Important Update', '<iframe width="100%" height="200" src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>', 100, 100, false); if(winDesktop.style.display !== 'block') { winDesktop.style.display = 'block'; terminalMode = 'desktop_gui'; } return; }
+        if (cmd === 'flashbang') { printLine('💣 Fire in the hole!', 'color-error'); triggerFlashbang(); return; }
+        if (cmd === 'time') { printLine(`🕒 本地物理时钟: ${new Date().toLocaleString()}`, 'color-success'); return; }
+        if (cmd === 'snow') { printLine('🌨️ 启动物理环境模拟：降雪', 'color-info'); startSnow(); return; }
+
+        // 🌟【彩蛋区】
+        if(cmd === 'pokemon') { printLine('🌟 召唤 TCG 卡包...', 'color-mythic'); triggerPokemonRain(); return; }
+        if(cmd === 'handball') { printLine('💥 手球碰撞测试！', 'color-warning'); triggerHandballSmash(); return; }
+        if(cmd === 'capcut') { document.body.classList.toggle('capcut-vhs'); printLine(document.body.classList.contains('capcut-vhs') ? '📼 VHS/剪辑滤镜叠加' : '📼 滤镜移除', 'color-info'); return; }
+        if(cmd === 'mario') { playRetroBeep(659, 'square', 0.1); setTimeout(()=>playRetroBeep(880, 'square', 0.2), 100); document.body.style.transform = 'translateY(-150px)'; setTimeout(()=>document.body.style.transform='', 300); printLine('🍄 1UP!', 'color-success'); return; }
+        if(cmd === 'top10') { document.body.classList.toggle('top10-park'); printLine('🏖️ 背景切换：海滨假日模式', 'color-success'); return; }
+        if(cmd === 'paknsave') { printLine('🚗 Drive-thru... 📦 已取货！', 'color-warning'); return; }
+        if(cmd === 'barrelroll') { document.body.style.transition = 'transform 2s'; document.body.style.transform = 'rotate(360deg)'; setTimeout(()=>{document.body.style.transition='transform 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), background-color 0.5s, filter 0.5s'; document.body.style.transform='';}, 2000); printLine('DO A BARREL ROLL!', 'color-info'); return; }
+        if(cmd === 'bsod') { playRetroBeep(100, 'sawtooth', 1.5); document.getElementById('bsod-screen').style.display = 'block'; terminalMode = 'bsod'; return; }
+        if(cmd === 'dvd') { startDvdBounce(); printLine('DVD 屏幕保护启动...', 'color-success'); return; }
+        if(cmd === 'matrix') { document.body.classList.toggle('matrix-active'); if(document.body.classList.contains('matrix-active')) requestAnimationFrame(drawMatrix); printLine(document.body.classList.contains('matrix-active') ? 'Canvas矩阵启动' : '矩阵关闭', 'color-success'); return; }
+        if(cmd === 'play' && arg1 === 'audio') { printLine('合成 8-bit 音轨...', 'color-info'); [261, 329, 392, 523, 392, 329, 261].forEach((freq, i) => { setTimeout(() => playRetroBeep(freq, 'sawtooth', 0.2), i * 150); }); return; }
+        if(cmd === 'physics') { printLine('Geometry Physics activated.', 'color-warning'); activateGeometryPhysics(); return; }
+        if(cmd === 'gravity') { printLine('全局重力失常！', 'color-mythic'); activateGeometryPhysics(); return; }
+        if ((cmd === 'rm' && arg1 === '-rf') || (cmd === 'sudo' && arg1 === 'rm')) { printLine('⚠️ FATAL: 级联删除...', 'color-error'); cmdInput.disabled = true; let dInt = setInterval(() => { const els = document.querySelectorAll('div, span, button'); if(els.length > 3) { const rEl = els[Math.floor(Math.random() * els.length)]; if(rEl.id !== 'cmd-input') rEl.remove(); } else { clearInterval(dInt); document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:20vh;">[ LemonOS Kernel Panic: DOM wiped ]</h1>'; } }, 30); return; }
+        if(cmd === 'engine' && arg1 === '3d') { document.body.classList.toggle('engine-3d-active'); printLine('3D引擎触发', 'color-success'); return; }
+        
+        // 【核心操作区】
+        if (cmd === 'download' && arg1 === 'python') { if(isPythonDownloaded) return printLine('Python 已就绪。', 'color-info'); terminalMode = 'download_game'; inputLine.style.opacity = '0'; startDownloadGame(); loadPyodide({ stdout: (m)=>printLine(m,'color-py-output'), stderr: (m)=>printLine(m,'color-error') }).then(p => { pyodideInstance = p; isPythonDownloaded = true; stopDownloadGame(); }).catch(e => { stopDownloadGame(); printLine('报错: '+e, 'color-error'); }); return; }
+        if (cmd === 'python') { if(!isPythonDownloaded) return printLine('请先 download python', 'color-error'); terminalMode = 'python'; printLine('Python 3.11.2 (Wasm)\nType "exit()" to leave.'); promptPath.textContent = '>>> '; promptPath.style.color = '#00ffff'; return; }
+        if (cmd === './crystal-dash.exe' || cmd === 'crystal-dash') { if(currentPath.join('/') === 'root/secret_projects') { terminalMode = 'mining_gui'; inputLine.style.opacity = '0'; initGameMap(); render2DFrame(); } else printLine('提示：cd secret_projects', 'color-error'); return; }
+
+        switch(cmd) {
+            case 'ls': case 'dir': let d=currentDir; for(let p of currentPath.slice(1)) d=d[p]; for(let f in d) { const isD=typeof d[f]==='object'; printLine(`${isD?'d----':'-a---'}   <span class="${isD?'color-info':(f.endsWith('.exe')?'color-exe':'')}">${isD?'['+f+']':f}</span>`); } break;
+            case 'cd': if(!arg1||arg1==='~') currentPath=['root']; else if(arg1==='..'){if(currentPath.length>1)currentPath.pop();} else { let d=currentDir; for(let p of currentPath.slice(1)) d=d[p]; if(d[arg1]&&typeof d[arg1]==='object') currentPath.push(arg1); else printLine(`找不到: ${arg1}`, 'color-error'); } promptPath.textContent = currentPath.length>1 ? `LemonOS C:\\Users\\Guest\\${currentPath.slice(1).join('\\')}>` : `LemonOS C:\\Users\\Guest>`; break;
+            case 'cat': let t=currentDir; for(let p of currentPath.slice(1)) t=t[p]; if(t[arg1]&&typeof t[arg1]==='string') printLine(t[arg1], 'color-info'); else printLine(`无法读取: ${arg1}`, 'color-error'); break;
+            case 'clear': case 'cls': output.innerHTML = ''; physicsActive = false; physicsNodes = []; break;
+            default: printLine(`无法识别: "${cmd}"。试试 sudo boot-modern, hack, rickroll, gravity`, 'color-error');
+        }
+    }
+
+    // ==========================================
+    // Python 多行解析内核
+    // ==========================================
+    async function handlePythonREPL(line) {
+        const trimmed = line.trim();
+        if(trimmed==='exit()'||trimmed==='quit()') { terminalMode='normal'; pythonBuffer=[]; promptPath.textContent=currentPath.length>1?`LemonOS C:\\Users\\Guest\\${currentPath.slice(1).join('\\')}>`:`LemonOS C:\\Users\\Guest>`; promptPath.style.color='#eeedf0'; printLine('已退出。'); return; }
+        if (line.includes('\n')) { try { let r = await pyodideInstance.runPythonAsync(line); if(r!==undefined)printLine(r,'color-py-output'); } catch(e) { printLine(e.toString(),'color-error'); } return; }
+        if(pythonBuffer.length>0) { if(line==='') { const code=pythonBuffer.join('\n'); pythonBuffer=[]; promptPath.textContent='>>> '; try{let r=await pyodideInstance.runPythonAsync(code); if(r!==undefined)printLine(r,'color-py-output');}catch(e){printLine(e.toString(),'color-error');} } else pythonBuffer.push(line); return; }
+        if(trimmed==='') return; if(trimmed.endsWith(':')) { pythonBuffer.push(line); promptPath.textContent='... '; return; }
+        try{let r=await pyodideInstance.runPythonAsync(line); if(r!==undefined)printLine(r,'color-py-output');}catch(e){printLine(e.toString(),'color-error');}
+    }
+
+    // 下载跑酷 & 2D 挖矿游戏
+    function startDownloadGame() { dlGameContainer=document.createElement('div'); dlGameContainer.style.color='#00ccff'; dlGameContainer.style.margin='15px 0'; output.appendChild(dlGameContainer); dlGameState={jumpTimer:0, obs:30, score:0, crash:false}; dlGameInterval=setInterval(()=>{ if(dlGameState.crash){dlGameContainer.innerHTML=`[💥] 分数: ${dlGameState.score}`; setTimeout(()=>dlGameState.crash=false,800); dlGameState.obs=30; return;} if(dlGameState.jumpTimer>0)dlGameState.jumpTimer--; dlGameState.obs--; if(dlGameState.obs<=0){dlGameState.obs=25+Math.floor(Math.random()*15);dlGameState.score+=10;} if(dlGameState.jumpTimer===0 && dlGameState.obs===5){dlGameState.crash=true;dlGameState.score=Math.max(0,dlGameState.score-5);} let l1="",l2=""; for(let i=0;i<40;i++){if(i===5){l1+=dlGameState.jumpTimer>0?"🏃":" ";l2+=dlGameState.jumpTimer>0?" ":"🏃";}else if(i===dlGameState.obs){l1+=" ";l2+="🧱";}else{l1+=" ";l2+="＿";}} dlGameContainer.innerHTML=`<div>${l1}</div><div>${l2}</div><br><div>[得分: <span class="color-success">${dlGameState.score}</span>] 按 W/空格跳跃. 拉取 Wasm...</div>`; },60); }
+    function stopDownloadGame() { clearInterval(dlGameInterval); dlGameContainer.innerHTML=`<div>✅ Python 挂载成功! 跑酷得分: ${dlGameState.score}</div>`; terminalMode='normal'; inputLine.style.opacity='1'; }
+
+    function initGameMap() { gameMap=[]; for(let y=0;y<MAP_HEIGHT;y++){let r=[];for(let x=0;x<MAP_WIDTH;x++){if(y<2)r.push(0);else{let rnd=Math.random();if(rnd>0.95)r.push(3);else if(rnd>0.6)r.push(2);else r.push(1);}}gameMap.push(r);} playerPos={x:12,y:0}; }
+    function render2DFrame() { let f='<span class="color-warning">💎 Crystal Dash 💎</span>\n====================================================\n'; for(let y=0;y<MAP_HEIGHT;y++){for(let x=0;x<MAP_WIDTH;x++){if(playerPos.x===x&&playerPos.y===y)f+='<span class="tile-player">&gt;&lt;</span>';else{const t=gameMap[y][x];f+=t===0?' ':t===1?'<span class="tile-dirt">▒▒</span>':t===2?'<span class="tile-stone">▓▓</span>':'<span class="tile-crystal">♦♦</span>';}}f+='\n';} f+=`====================================================\n🎒 水晶: <span class="color-info">${miningStats.crystals}</span> | 💰 金币: <span class="color-warning">${miningStats.coins}</span> G\n[WASD]:移动/挖掘 | [Q]:卖出 | [E]:退出`; output.innerHTML=f; }
+    function handle2DGameInput(e) { let k=e.key.toLowerCase(); if(k==='e'){terminalMode='normal';inputLine.style.opacity='1';output.innerHTML='';printLine('[2D引擎退出]');return;} if(k==='q'){miningStats.coins+=miningStats.crystals*15;miningStats.crystals=0;render2DFrame();return;} let dx=0,dy=0; if(k==='w'||k==='arrowup')dy=-1; if(k==='s'||k==='arrowdown')dy=1; if(k==='a'||k==='arrowleft')dx=-1; if(k==='d'||k==='arrowright')dx=1; if(dx!==0||dy!==0){let nx=playerPos.x+dx,ny=playerPos.y+dy;if(nx>=0&&nx<MAP_WIDTH&&ny>=0&&ny<MAP_HEIGHT){if(gameMap[ny][nx]!==0){if(gameMap[ny][nx]===3)miningStats.crystals++;gameMap[ny][nx]=0;}playerPos.x=nx;playerPos.y=ny;}render2DFrame();} }
+</script>
+</body>
+</html>
